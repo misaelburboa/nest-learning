@@ -1,5 +1,5 @@
 import { PipeTransform, ArgumentMetadata } from "@nestjs/common";
-import { TaskStatus } from "../task.model";
+import { TaskStatus } from "../task-status.enum";
 export declare class TaskStatusValidationPipe implements PipeTransform {
     readonly allowedStatuses: TaskStatus[];
     transform(value: string, metadata: ArgumentMetadata): any;
