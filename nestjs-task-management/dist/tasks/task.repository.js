@@ -10,26 +10,46 @@ exports.TaskRepository = void 0;
 const task_entity_1 = require("./task.entity");
 const typeorm_1 = require("typeorm");
 const task_status_enum_1 = require("./task-status.enum");
+const common_1 = require("@nestjs/common");
 let TaskRepository = class TaskRepository extends typeorm_1.Repository {
-    async getTasks(filterDto) {
+    constructor() {
+        super(...arguments);
+        this.logger = new common_1.Logger('TaskRepository');
+    }
+    async getTasks(filterDto, user) {
         const { status, search } = filterDto;
         const query = this.createQueryBuilder('task');
+        query.where('task.userId = :userId', { userId: user.id });
         if (status) {
             query.andWhere('task.status = :status', { status });
         }
         if (search) {
             query.andWhere('(task.title LIKE :search OR task.description LIKE :search)', { search: `%${search}%` });
         }
-        const tasks = query.getMany();
-        return tasks;
+        try {
+            const tasks = query.getMany();
+            return tasks;
+        }
+        catch (error) {
+            this.logger.error(`Failed to ger tasks for user ${user.username}, Filters: ${JSON.stringify(filterDto)}`, error.stack);
+            throw new common_1.InternalServerErrorException();
+        }
     }
-    async createTask(taskDto) {
+    async createTask(taskDto, user) {
         const { title, description } = taskDto;
         const task = new task_entity_1.Task();
         task.title = title;
         task.description = description,
             task.status = task_status_enum_1.TaskStatus.OPEN;
-        await task.save();
+        task.user = user;
+        try {
+            await task.save();
+        }
+        catch (error) {
+            this.logger.error(`Failed to create task for user ${user.username}, Data: ${JSON.stringify(taskDto)}`, error.stack);
+            throw new common_1.InternalServerErrorException();
+        }
+        delete task.user;
         return task;
     }
 };
